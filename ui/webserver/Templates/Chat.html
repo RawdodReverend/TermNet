@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TermNet Chat</title>
+  <style>
+    :root {
+      --primary: #000000;
+      --primary-dark: #1a1a1a;
+      --primary-light: #333333;
+      --secondary: #f8f9fa;
+      --accent: #28a745;
+      --danger: #dc3545;
+      --text: #000000;
+      --text-light: #666666;
+      --text-muted: #999999;
+      --border: #e1e5e9;
+      --border-dark: #d1d5db;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --shadow-lg: rgba(0, 0, 0, 0.15);
+      --gradient: linear-gradient(135deg, #000000 0%, #333333 100%);
+      --surface: rgba(255, 255, 255, 0.98);
+      --cot-bg: #f8f9fa;
+      --cot-border: #e9ecef;
+      --cot-text: #495057;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+      backdrop-filter: blur(20px);
+      background: var(--surface);
+      border-radius: 0;
+      box-shadow: 0 25px 50px var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    @media (min-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+      .chat-container {
+        height: calc(100vh - 2rem);
+        border-radius: 16px;
+        margin: 1rem auto;
+      }
+    }
+
+    .header {
+      padding: 1.5rem 2rem;
+      background: var(--gradient);
+      color: white;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 2px solid var(--primary-dark);
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(255,255,255,0.02) 10px,
+        rgba(255,255,255,0.02) 20px
+      );
+    }
+
+    .header h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      letter-spacing: -0.025em;
+    }
+
+    .header .emoji {
+      font-size: 2rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .status-indicator {
+      position: absolute;
+      top: 1.5rem;
+      right: 2rem;
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+      animation: heartbeat 2s ease-in-out infinite;
+    }
+
+    @keyframes heartbeat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); box-shadow: 0 0 0 6px rgba(40, 167, 69, 0.1); }
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 1.5rem 2rem 2rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: white;
+      scroll-behavior: smooth;
+      min-height: 0;
+    }
+
+    .messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .messages::-webkit-scrollbar-thumb {
+      background: var(--border-dark);
+      border-radius: 3px;
+    }
+
+    .messages::-webkit-scrollbar-thumb:hover {
+      background: var(--text-light);
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 1rem 1.25rem;
+      border-radius: 20px;
+      line-height: 1.6;
+      font-size: 0.95rem;
+      position: relative;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: messageIn 0.4s ease-out forwards;
+      word-wrap: break-word;
+    }
+
+    .message h1, .message h2, .message h3 {
+      margin: 0.5em 0;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .message h1 { font-size: 1.4em; }
+    .message h2 { font-size: 1.2em; }
+    .message h3 { font-size: 1.1em; }
+
+    .message p {
+      margin: 0.5em 0;
+    }
+
+    .message strong {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .message em {
+      font-style: italic;
+    }
+
+    .message code {
+      background: #f1f3f4;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.9em;
+      border: 1px solid #e8eaed;
+    }
+
+    .message pre {
+      background: #f8f9fa;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1em;
+      margin: 0.5em 0;
+      overflow-x: auto;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.85em;
+      line-height: 1.4;
+    }
+
+    .message pre code {
+      background: none;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+    }
+
+    .message ul, .message ol {
+      margin: 0.5em 0;
+      padding-left: 1.5em;
+    }
+
+    .message li {
+      margin: 0.25em 0;
+    }
+
+    .message blockquote {
+      border-left: 3px solid var(--primary);
+      padding-left: 1em;
+      margin: 0.5em 0;
+      color: var(--text-light);
+      font-style: italic;
+    }
+
+    .message a {
+      color: var(--primary);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s;
+    }
+
+    .message a:hover {
+      border-bottom-color: var(--primary);
+    }
+
+    .user code {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .user pre {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    @keyframes messageIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .user {
+      align-self: flex-end;
+      background: var(--gradient);
+      color: white;
+      border-bottom-right-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--primary-dark);
+    }
+
+    .user::before {
+      content: '';
+      position: absolute;
+      right: -8px;
+      bottom: 0;
+      width: 0;
+      height: 0;
+      border: 8px solid transparent;
+      border-left-color: var(--primary-light);
+      border-bottom: none;
+    }
+
+    .bot {
+      align-self: flex-start;
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 8px;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .bot::before {
+      content: '';
+      position: absolute;
+      left: -9px;
+      bottom: 0;
+      width: 0;
+      height: 0;
+      border: 8px solid transparent;
+      border-right-color: white;
+      border-bottom: none;
+      filter: drop-shadow(-1px 0 0 var(--border));
+    }
+
+    .thinking {
+      align-self: flex-start;
+      background: #f8f9fa;
+      color: var(--text-light);
+      font-style: italic;
+      border-bottom-left-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .thinking::before {
+      content: '';
+      position: absolute;
+      left: -9px;
+      bottom: 0;
+      width: 0;
+      height: 0;
+      border: 8px solid transparent;
+      border-right-color: #f8f9fa;
+      border-bottom: none;
+    }
+
+    /* COT (Chain of Thought) Styles */
+    .cot-container {
+      align-self: flex-start;
+      max-width: 85%;
+      margin-bottom: 0.5rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--cot-border);
+      background: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      flex-shrink: 0;
+    }
+
+    .cot-header {
+      background: var(--cot-bg);
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--cot-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .cot-header:hover {
+      background: #e9ecef;
+    }
+
+    .cot-header .label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--cot-text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .cot-header .toggle-icon {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+
+    .cot-header.collapsed .toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    .cot-content {
+      background: var(--cot-bg);
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--cot-text);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-y: auto;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .cot-content:not(.collapsed) {
+      padding: 1rem;
+      max-height: 300px;
+      min-height: 60px;
+    }
+
+    .cot-content.collapsed {
+      max-height: 0;
+      min-height: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .cot-content::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .cot-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .cot-content::-webkit-scrollbar-thumb {
+      background: var(--border-dark);
+      border-radius: 2px;
+    }
+
+    .tool-indicator {
+      align-self: flex-start;
+      background: linear-gradient(135deg, #000000 0%, #333333 100%);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      margin: 0.25rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: slideIn 0.3s ease-out;
+      border: 1px solid var(--primary-dark);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .tool-indicator .spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .input-container {
+      padding: 1.5rem 2rem;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 1rem;
+      align-items: flex-end;
+    }
+
+    .input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    input {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      font-size: 1rem;
+      background: #fafafa;
+      transition: all 0.3s ease;
+      outline: none;
+      resize: none;
+      color: var(--text);
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+    }
+
+    input::placeholder {
+      color: var(--text-light);
+    }
+
+    button {
+      padding: 1rem 1.5rem;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--primary-dark);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 2px 4px var(--shadow);
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    .error {
+      background: var(--danger) !important;
+      color: white !important;
+      animation: shake 0.5s ease-in-out;
+      border-color: darkred !important;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .typing-indicator {
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-light);
+      font-size: 0.85rem;
+      padding: 0.5rem 2rem;
+      background: white;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      z-index: 10;
+      position: relative;
+    }
+
+    .typing-indicator.show {
+      display: flex;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background: var(--text-light);
+      border-radius: 50%;
+      animation: typingDots 1.4s ease-in-out infinite;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typingDots {
+      0%, 60%, 100% { transform: scale(1); opacity: 0.4; }
+      30% { transform: scale(1.2); opacity: 1; }
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      .header {
+        padding: 1rem 1.5rem;
+      }
+      
+      .header h2 {
+        font-size: 1.5rem;
+      }
+      
+      .messages {
+        padding: 1rem 1.5rem;
+      }
+      
+      .input-container {
+        padding: 1rem 1.5rem;
+      }
+      
+      .message {
+        max-width: 85%;
+        padding: 0.875rem 1rem;
+      }
+      
+      .cot-container {
+        max-width: 90%;
+      }
+      
+      button {
+        padding: 1rem 1.25rem;
+      }
+    }
+
+    /* Additional styles for code highlighting */
+    .hljs {
+      display: block;
+      overflow-x: auto;
+      padding: 1em;
+      border-radius: 4px;
+      background: #f8f9fa !important;
+    }
+
+    .message pre code.hljs {
+      padding: 0;
+    }
+
+    .message pre {
+      position: relative;
+    }
+
+    .message pre::before {
+      content: attr(data-lang);
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.1);
+      color: var(--text-light);
+      font-size: 0.75em;
+      padding: 0.25em 0.5em;
+      border-bottom-left-radius: 4px;
+      border-top-right-radius: 7px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">
+      <div class="status-indicator"></div>
+      <h2>
+        <span class="emoji">💬</span>
+        TermNet Chat
+      </h2>
+    </div>
+    
+    <div class="messages" id="messages"></div>
+    
+    <div class="typing-indicator" id="typingIndicator">
+      <span>TermNet is thinking</span>
+      <div class="typing-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+    
+    <div class="input-container">
+      <div class="input-wrapper">
+        <input type="text" id="message" placeholder="Ask me anything..." maxlength="1000">
+      </div>
+      <button onclick="sendMessage()" id="sendButton">
+        Send
+      </button>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it-footnote/dist/markdown-it-footnote.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it-sub/dist/markdown-it-sub.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it-sup/dist/markdown-it-sup.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it-container/dist/markdown-it-container.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it-multimd-table/dist/markdown-it-multimd-table.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script>
+const messagesContainer = document.getElementById("messages");
+const typingIndicator = document.getElementById("typingIndicator");
+const sendButton = document.getElementById("sendButton");
+const messageInput = document.getElementById("message");
+
+let currentBotMessage = null;
+let currentCotContainer = null;
+let toolIndicator = null;
+let responseBuffer = '';
+let cotBuffer = '';
+let messageCount = 0;
+let isProcessingTools = false;
+let inThinkTags = false;
+let tagBuffer = '';
+
+// Initialize markdown-it with proper code highlighting - YOUR ORIGINAL CONFIG
+const md = window.markdownit({
+  html: true,
+  linkify: true,
+  typographer: true,
+  highlight: function (str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return '<pre class="hljs" data-lang="' + lang + '"><code>' + 
+               hljs.highlight(str, { language: lang, ignoreIllegals: true }).value + 
+               '</code></pre>';
+      } catch (__) {}
+    }
+
+    // Fallback for unknown languages
+    return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
+  }
+})
+.use(window.markdownitFootnote)
+.use(window.markdownitSub)
+.use(window.markdownitSup)
+.use(window.markdownitContainer, "warning")
+.use(window.markdownitMultimdTable, { multiline: true, rowspan: true, headerless: true });
+
+function parseMarkdown(text) {
+  return md.render(text || "");
+}
+
+function createCotContainer() {
+  const cotContainer = document.createElement("div");
+  cotContainer.className = "cot-container";
+  
+  const header = document.createElement("div");
+  header.className = "cot-header";
+  header.innerHTML = `
+    <div class="label">
+      🧠 Chain of Thought
+    </div>
+    <div class="toggle-icon">▼</div>
+  `;
+  
+  const content = document.createElement("div");
+  content.className = "cot-content";
+  
+  cotContainer.appendChild(header);
+  cotContainer.appendChild(content);
+  
+  // Add click handler for collapse/expand
+  header.addEventListener('click', () => {
+    const isCollapsed = content.classList.contains('collapsed');
+    if (isCollapsed) {
+      content.classList.remove('collapsed');
+      header.classList.remove('collapsed');
+    } else {
+      content.classList.add('collapsed');
+      header.classList.add('collapsed');
+    }
+    
+    // Ensure scrolling works after expand/collapse
+    setTimeout(() => {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 300);
+  });
+  
+  messagesContainer.appendChild(cotContainer);
+  
+  // Force scroll to bottom with a delay to ensure layout is complete
+  setTimeout(() => {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }, 0);
+  
+  return { container: cotContainer, content };
+}
+
+function appendMessage(sender, message, messageType = "normal") {
+  const messageElement = document.createElement("div");
+  
+  let cssClass = "bot";
+  if (sender === "You") {
+    cssClass = "user";
+  } else if (messageType === "thinking") {
+    cssClass = "thinking";
+  }
+  
+  messageElement.classList.add("message", cssClass);
+  
+  // Parse markdown for bot messages - YOUR ORIGINAL MARKDOWN HANDLING
+  if (sender === "TermNet" || sender === "System") {
+    messageElement.innerHTML = parseMarkdown(message);
+    
+    // Re-highlight code blocks after they're added to DOM
+    setTimeout(() => {
+      messageElement.querySelectorAll('pre code').forEach((block) => {
+        // Only highlight if not already highlighted
+        if (!block.classList.contains('hljs')) {
+          hljs.highlightElement(block);
+        }
+      });
+    }, 0);
+  } else {
+    messageElement.textContent = message;
+  }
+  
+  // Add message with animation delay
+  messageElement.style.animationDelay = `${messageCount * 0.1}s`;
+  messageCount++;
+  
+  messagesContainer.appendChild(messageElement);
+  
+  // Smooth scroll to bottom
+  setTimeout(() => {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }, 50);
+  
+  return messageElement;
+}
+
+function showToolIndicator() {
+  if (!toolIndicator) {
+    toolIndicator = document.createElement("div");
+    toolIndicator.className = "tool-indicator";
+    toolIndicator.innerHTML = `
+      <div class="spinner"></div>
+      <span>Using tools to process your request...</span>
+    `;
+    messagesContainer.appendChild(toolIndicator);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+}
+
+function hideToolIndicator() {
+  if (toolIndicator) {
+    toolIndicator.remove();
+    toolIndicator = null;
+  }
+}
+
+function setLoading(loading) {
+  sendButton.disabled = loading;
+  sendButton.textContent = loading ? "Sending..." : "Send";
+  
+  if (loading) {
+    typingIndicator.classList.add("show");
+  } else {
+    typingIndicator.classList.remove("show");
+  }
+}
+
+function showError(message) {
+  const errorElement = appendMessage("System", `⚠️ ${message}`, "error");
+  errorElement.classList.add("error");
+  setTimeout(() => {
+    errorElement.classList.add("highlight");
+  }, 100);
+}
+
+function sendMessage() {
+  const input = document.getElementById("message");
+  const text = input.value.trim();
+  if (!text || sendButton.disabled) return;
+  
+  // Add user message
+  const userMessage = appendMessage("You", text);
+  input.value = "";
+  
+  // Reset state
+  currentBotMessage = null;
+  currentCotContainer = null;
+  toolIndicator = null;
+  responseBuffer = '';
+  cotBuffer = '';
+  isProcessingTools = false;
+  inThinkTags = false;
+  tagBuffer = '';
+  
+  // Code block tracking - YOUR ORIGINAL CODE BLOCK HANDLING
+  let inCodeBlock = false;
+  let currentLanguage = '';
+  let codeBuffer = '';
+  
+  setLoading(true);
+
+  const formData = new FormData();
+  formData.append("message", text);
+
+  fetch("/stream", {
+    method: "POST",
+    body: formData
+  }).then(res => {
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    function read() {
+      reader.read().then(({done, value}) => {
+        if (done) {
+          finalizeResponse();
+          return;
+        }
+        
+        buffer += decoder.decode(value, {stream: true});
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        lines.forEach(line => {
+          if (line.startsWith("data: ")) {
+            try {
+              const jsonData = line.replace("data: ", "");
+              const data = JSON.parse(jsonData);
+              handleStreamEvent(data);
+            } catch (e) {
+              console.error("Error parsing JSON:", e, line);
+            }
+          }
+        });
+        
+        if (!done) {
+          read();
+        }
+      }).catch(error => {
+        console.error("Stream error:", error);
+        setLoading(false);
+        hideToolIndicator();
+        showError("Connection error. Please try again.");
+      });
+    }
+    read();
+  }).catch(error => {
+    console.error("Fetch error:", error);
+    setLoading(false);
+    hideToolIndicator();
+    showError("Failed to send message. Please check your connection.");
+  });
+
+  function handleStreamEvent(data) {
+    switch(data.type) {
+      case "response_start":
+        resetState();
+        break;
+        
+      case "tool_execution":
+        isProcessingTools = true;
+        showToolIndicator();
+        break;
+        
+      case "response_chunk":
+        processChunk(data.chunk || "");
+        break;
+        
+      case "response_end":
+        finalizeResponse();
+        break;
+        
+      case "error":
+        setLoading(false);
+        hideToolIndicator();
+        showError(`Error: ${data.message}`);
+        break;
+        
+      case "status":
+      case "keepalive":
+        // No action needed for these
+        break;
+    }
+  }
+
+  function resetState() {
+    hideToolIndicator();
+    currentBotMessage = null;
+    currentCotContainer = null;
+    responseBuffer = '';
+    cotBuffer = '';
+    isProcessingTools = false;
+    inThinkTags = false;
+    tagBuffer = '';
+    inCodeBlock = false;
+    codeBuffer = '';
+    currentLanguage = '';
+  }
+
+  function processChunk(chunkText) {
+    if (isProcessingTools) {
+      hideToolIndicator();
+      isProcessingTools = false;
+    }
+
+    // Decode HTML entities first
+    chunkText = chunkText
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+
+    // Combine with tag buffer
+    let fullText = tagBuffer + chunkText;
+    tagBuffer = '';
+    let i = 0;
+
+    while (i < fullText.length) {
+      if (!inThinkTags) {
+        // Look for opening <think> tag
+        const openTag = '<think>';
+        const openIndex = fullText.indexOf(openTag, i);
+        
+        if (openIndex !== -1) {
+          // Process content before the tag as main response
+          const beforeTag = fullText.substring(i, openIndex);
+          if (beforeTag) {
+            processMainContent(beforeTag);
+          }
+          
+          // Enter think mode
+          inThinkTags = true;
+          i = openIndex + openTag.length;
+          
+          // Create COT container if it doesn't exist
+          if (!currentCotContainer) {
+            currentCotContainer = createCotContainer();
+          }
+        } else {
+          // No opening tag found - check for partial opening tag at the end
+          const lastLt = fullText.lastIndexOf('<');
+          if (lastLt !== -1 && lastLt >= i) {
+            const potentialTag = fullText.substring(lastLt);
+            
+            // Check if this could be the start of a think tag
+            if (potentialTag === '<' || 
+                potentialTag.startsWith('<t') || 
+                potentialTag.startsWith('<th') || 
+                potentialTag.startsWith('<thi') || 
+                potentialTag.startsWith('<thin') || 
+                potentialTag.startsWith('<think')) {
+              
+              // Buffer the partial tag
+              tagBuffer = potentialTag;
+              // Process content before the partial tag
+              const beforePartial = fullText.substring(i, lastLt);
+              if (beforePartial) {
+                processMainContent(beforePartial);
+              }
+            } else {
+              // Not a think tag, process everything as main content
+              processMainContent(fullText.substring(i));
+            }
+          } else {
+            // No '<' found, process everything as main content
+            processMainContent(fullText.substring(i));
+          }
+          break;
+        }
+      } else {
+        // In think mode - look for closing </think> tag
+        const closeTag = '</think>';
+        const closeIndex = fullText.indexOf(closeTag, i);
+        
+        if (closeIndex !== -1) {
+          // Add content to COT buffer
+          const cotContent = fullText.substring(i, closeIndex);
+          cotBuffer += cotContent;
+          updateCotDisplay();
+          
+          // Exit think mode
+          inThinkTags = false;
+          i = closeIndex + closeTag.length;
+          
+          // Collapse COT container
+          if (currentCotContainer) {
+            const content = currentCotContainer.content;
+            const header = currentCotContainer.container.querySelector('.cot-header');
+            content.classList.add('collapsed');
+            header.classList.add('collapsed');
+            currentCotContainer = null;
+            cotBuffer = '';
+          }
+        } else {
+          // No closing tag found - check for partial closing tag at the end
+          const lastLt = fullText.lastIndexOf('<');
+          if (lastLt !== -1 && lastLt >= i) {
+            const potentialTag = fullText.substring(lastLt);
+            
+            // Check if this could be the start of a closing think tag
+            if (potentialTag === '<' || 
+                potentialTag.startsWith('</') || 
+                potentialTag.startsWith('</t') || 
+                potentialTag.startsWith('</th') || 
+                potentialTag.startsWith('</thi') || 
+                potentialTag.startsWith('</thin') || 
+                potentialTag.startsWith('</think')) {
+              
+              // Buffer the partial closing tag
+              tagBuffer = potentialTag;
+              // Add content before the partial tag to COT
+              const beforePartial = fullText.substring(i, lastLt);
+              cotBuffer += beforePartial;
+              updateCotDisplay();
+            } else {
+              // Not a closing tag, add everything to COT
+              cotBuffer += fullText.substring(i);
+              updateCotDisplay();
+            }
+          } else {
+            // No '<' found, add everything to COT
+            cotBuffer += fullText.substring(i);
+            updateCotDisplay();
+          }
+          break;
+        }
+      }
+    }
+
+    // Always scroll to bottom during generation
+    setTimeout(() => {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 10);
+  }
+
+  // YOUR ORIGINAL MARKDOWN PROCESSING FUNCTION - FULLY RESTORED
+  function processMainContent(content) {
+    if (!content) return;
+    
+    if (!currentBotMessage) {
+      currentBotMessage = appendMessage("TermNet", "", "bot");
+    }
+    
+    // Handle code blocks - YOUR ORIGINAL CODE BLOCK LOGIC
+    if (inCodeBlock) {
+      // Check if this chunk ends the code block
+      if (content.includes('```')) {
+        const parts = content.split('```');
+        codeBuffer += parts[0];
+        // Close the code block
+        responseBuffer += `\`\`\`${currentLanguage}\n${codeBuffer}\n\`\`\``;
+        inCodeBlock = false;
+        codeBuffer = '';
+        currentLanguage = '';
+        // Add any text after the code block
+        if (parts.length > 1) {
+          responseBuffer += parts.slice(1).join('```');
+        }
+      } else {
+        codeBuffer += content;
+      }
+    } else {
+      // Check if this chunk starts a code block
+      if (content.includes('```')) {
+        const parts = content.split('```');
+        
+        // Handle text before code block
+        if (parts[0]) {
+          responseBuffer += parts[0];
+        }
+        
+        // Start new code block if we have language specification
+        if (parts.length > 1) {
+          const languageMatch = parts[1].match(/^(\w+)/);
+          if (languageMatch) {
+            currentLanguage = languageMatch[1];
+            inCodeBlock = true;
+            codeBuffer = parts[1].substring(currentLanguage.length);
+          } else {
+            // If no language specified, treat as plain code
+            currentLanguage = '';
+            inCodeBlock = true;
+            codeBuffer = parts[1];
+          }
+          
+          // Handle multiple code blocks in same chunk (unlikely but possible)
+          if (parts.length > 2) {
+            // This would be very rare, but handle it by closing and reopening
+            responseBuffer += `\`\`\`${currentLanguage}\n${codeBuffer}\n\`\`\``;
+            inCodeBlock = false;
+            codeBuffer = '';
+            currentLanguage = '';
+            responseBuffer += parts.slice(2).join('```');
+          }
+        }
+      } else {
+        responseBuffer += content;
+      }
+    }
+    
+    // Update the message display with proper markdown parsing - YOUR ORIGINAL RENDERING
+    currentBotMessage.innerHTML = parseMarkdown(responseBuffer + 
+      (inCodeBlock ? `\`\`\`${currentLanguage}\n${codeBuffer}` : ''));
+    
+    // Re-highlight code blocks - YOUR ORIGINAL HIGHLIGHTING
+    setTimeout(() => {
+      currentBotMessage.querySelectorAll('pre code').forEach((block) => {
+        if (!block.classList.contains('hljs')) {
+          hljs.highlightElement(block);
+        }
+      });
+    }, 0);
+  }
+
+  function updateCotDisplay() {
+    if (currentCotContainer) {
+      currentCotContainer.content.textContent = cotBuffer;
+    }
+  }
+
+  function finalizeResponse() {
+    setLoading(false);
+    hideToolIndicator();
+    
+    // Handle any remaining think tags
+    if (inThinkTags && currentCotContainer) {
+      inThinkTags = false;
+      const content = currentCotContainer.content;
+      const header = currentCotContainer.container.querySelector('.cot-header');
+      content.classList.add('collapsed');
+      header.classList.add('collapsed');
+    }
+    
+    // Handle any remaining code blocks - YOUR ORIGINAL FINALIZATION
+    if (inCodeBlock && codeBuffer) {
+      responseBuffer += `\`\`\`${currentLanguage}\n${codeBuffer}\n\`\`\``;
+    }
+    
+    // Final update of the message - YOUR ORIGINAL FINAL RENDERING
+    if (responseBuffer.trim() && currentBotMessage) {
+      currentBotMessage.innerHTML = parseMarkdown(responseBuffer.trim());
+      setTimeout(() => {
+        currentBotMessage.querySelectorAll('pre code').forEach((block) => {
+          hljs.highlightElement(block);
+        });
+      }, 0);
+    }
+    
+    // Final scroll
+    setTimeout(() => {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 100);
+  }
+}
+
+// Enhanced keyboard handling
+messageInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// Auto-resize input and character counter
+messageInput.addEventListener("input", (e) => {
+  const length = e.target.value.length;
+  const maxLength = e.target.maxLength;
+  
+  if (length > maxLength * 0.9) {
+    e.target.style.borderColor = "var(--danger)";
+  } else {
+    e.target.style.borderColor = "";
+  }
+});
+
+// Focus input on load
+messageInput.focus();
+
+// Add welcome message on load
+setTimeout(() => {
+  appendMessage("TermNet", "Welcome to TermNet Chat! I'm ready to help you with anything.", "bot");
+}, 500);
+</script>
+</body>
+</html>

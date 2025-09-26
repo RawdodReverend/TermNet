@@ -1,0 +1,163 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "terminal_execute",
+      "description": "Execute a command in the terminal",
+      "module": "terminal",
+      "class": "TerminalSession",
+      "method": "execute_command",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string" }
+        },
+        "required": ["command"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_search",
+      "description": "Search a webpage for interactive elements (links, buttons, forms). Returns structured data with links indexed for follow-up.",
+      "module": "browser_search_websocket",
+      "class": "BrowserSearchTool",
+      "method": "search",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string", "description": "The URL to navigate to and search" }
+        },
+        "required": ["url"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_get_page",
+      "description": "Get the text content from the current page or navigate to a new URL",
+      "module": "browser_search_websocket",
+      "class": "BrowserSearchTool",
+      "method": "click_and_collect",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string", "description": "URL to navigate to and get content from" }
+        },
+        "required": ["url"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_follow_link",
+      "description": "Follow a link by its index number from previous search results",
+      "module": "browser_search_websocket",
+      "class": "BrowserSearchTool",
+      "method": "follow_link",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "link_index": { "type": "integer", "description": "Index number of the link to follow (from browser_search results)" }
+        },
+        "required": ["link_index"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_search_page",
+      "description": "Search for text on the current page",
+      "module": "browser_search_websocket",
+      "class": "BrowserSearchTool",
+      "method": "search_page",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "search_term": { "type": "string", "description": "Text to search for on the current page" }
+        },
+        "required": ["search_term"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "scratchpad",
+      "description": "A scratchpad/planner tool for the LLM to store, update, and retrieve freeform notes or planning thoughts.",
+      "module": "scratchpad",
+      "class": "Scratchpad",
+      "method": "run",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["write", "read_all", "clear"],
+            "description": "Action to perform: write a note, read all notes, or clear the scratchpad."
+          },
+          "content": {
+            "type": "string",
+            "description": "Content of the note when action is 'write'. Ignored otherwise."
+          }
+        },
+        "required": ["action"]
+      }
+    }
+  },
+
+  {
+    "type": "function",
+    "function": {
+      "name": "notification_add",
+      "description": "Add a new notification via the notification server",
+      "module": "notification_tool",
+      "class": "NotificationTool",
+      "method": "add_notification",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "message": { "type": "string" },
+          "reminder_time": { "type": "number", "description": "Optional Unix timestamp for reminder" }
+        },
+        "required": ["title", "message"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "notification_list",
+      "description": "List all active notifications from the notification server",
+      "module": "notification_tool",
+      "class": "NotificationTool",
+      "method": "list_notifications",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "notification_dismiss",
+      "description": "Dismiss a notification by index via the notification server",
+      "module": "notification_tool",
+      "class": "NotificationTool",
+      "method": "dismiss_notification",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "integer", "description": "Index of the notification to dismiss" }
+        },
+        "required": ["index"]
+      }
+    }
+  }
+]
