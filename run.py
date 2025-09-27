@@ -163,6 +163,9 @@ class TermNetLauncher:
 
         print("Starting Terminal UI...")
         print("=" * 50)
+        
+        # Clear screen before launching terminal UI
+        os.system('clear' if os.name == 'posix' else 'cls')
 
         try:
             self.ui_process = subprocess.Popen(

@@ -4,6 +4,7 @@ import time
 import hashlib
 import aiohttp
 import asyncio
+import platform
 from typing import Dict, List, Tuple
 
 from termnet.config import CONFIG
@@ -22,6 +23,9 @@ class TermNetAgent:
         self.notification_server_url = notification_server_url
         self.notifications: List[Dict] = []  # cache of latest notifications
 
+        # 🖥️ Detect operating system
+        self.os_info = self._detect_os()
+
         # 🔌 Load tools dynamically
         self.tool_loader = ToolLoader()
         self.tool_loader.load_tools()
@@ -35,47 +39,80 @@ class TermNetAgent:
         self.notification_task = asyncio.create_task(self._auto_refresh_prompt())
 
     # -----------------------------
+    # SYSTEM DETECTION
+    # -----------------------------
+    def _detect_os(self) -> Dict[str, str]:
+        """Detect operating system and return relevant info"""
+        system = platform.system().lower()
+        
+        os_info = {
+            "system": system,
+            "platform": platform.platform(),
+            "architecture": platform.architecture()[0],
+            "python_version": platform.python_version(),
+        }
+        
+        # Add OS-specific info
+        if system == "darwin":
+            os_info["os_type"] = "macOS"
+            os_info["shell_hint"] = "Use bash/zsh commands, brew for packages"
+            os_info["package_manager"] = "brew"
+        elif system == "linux":
+            os_info["os_type"] = "Linux"
+            os_info["shell_hint"] = "Use bash commands, apt/yum/pacman for packages"
+            # Try to detect package manager
+            import shutil
+            if shutil.which("apt"):
+                os_info["package_manager"] = "apt"
+            elif shutil.which("yum"):
+                os_info["package_manager"] = "yum"
+            elif shutil.which("pacman"):
+                os_info["package_manager"] = "pacman"
+            else:
+                os_info["package_manager"] = "unknown"
+        elif system == "windows":
+            os_info["os_type"] = "Windows"
+            os_info["shell_hint"] = "Use cmd/powershell commands, winget/choco for packages"
+            os_info["package_manager"] = "winget"
+        else:
+            os_info["os_type"] = "Unknown"
+            os_info["shell_hint"] = "Use standard shell commands"
+            os_info["package_manager"] = "unknown"
+            
+        return os_info
+
+    # -----------------------------
     # SYSTEM PROMPT
     # -----------------------------
-    def _get_system_prompt_base(self) -> str:
-        return """
-You are TermNet, a smart, goal-driven assistant with access to powerful tools.
-
-You operate through conversation, but you can call external tools to collect data, perform actions, or solve tasks more effectively.
-
-🧠 BEHAVIOR RULES:
-- Think step-by-step before responding. Consider whether a tool is needed.
-- If a tool can help, CALL IT FIRST before saying anything to the user.
-- Never fabricate results. Always wait for tool output before using its information.
-- After using a tool, reassess the goal and decide the next step.
-- Call multiple tools if necessary. Chain steps logically.
-- Only respond to the user when you have useful or complete information.
-
-🧰 TOOL USAGE:
-- You have access to tools like: `browser_search`, `click_link`, `terminal_execute`, etc. Use them strategically.
-- Tool arguments must be accurate and relevant. Use structured reasoning to prepare them.
-- If a tool fails, recover gracefully and try another approach.
-
-💬 COMMUNICATION STYLE:
-- Be concise, clear, and confident.
-- Summarize tool output naturally – don't dump raw data.
-- When the task is complete, explain what was done and any next steps or outcomes.
-- Avoid unnecessary filler or repetition.
-
-⚠️ REMEMBER:
-- Tools come first. Don't respond prematurely.
-- You are here to **solve problems**, not just chat.
-- Every message should move the task forward.
-"""
-
     def _get_system_prompt(self) -> str:
+        # Load base system prompt from config
+        prompt_config = CONFIG.get("SYSTEM_PROMPT", "You are a helpful assistant.")
+        
+        # Handle both string and array formats
+        if isinstance(prompt_config, list):
+            base_prompt = "\n".join(prompt_config)
+        else:
+            base_prompt = prompt_config
+        
+        # Add system information
+        system_info = f"""
+🖥️ SYSTEM INFORMATION:
+- Operating System: {self.os_info['os_type']} ({self.os_info['system']})
+- Architecture: {self.os_info['architecture']}
+- Platform: {self.os_info['platform']}
+- Package Manager: {self.os_info['package_manager']}
+- Shell Hint: {self.os_info['shell_hint']}
+- Python Version: {self.os_info['python_version']}"""
+        
+        # Add notifications section
         notif_text = "No active notifications."
         if self.notifications:
             notif_text = "\n".join(
                 f"{idx+1}. {n.get('title', 'Untitled')} - {n.get('message', '')}"
                 for idx, n in enumerate(self.notifications)
             )
-        return self._get_system_prompt_base() + "\n\n🔌 Active Notifications:\n" + notif_text
+        
+        return base_prompt + system_info + "\n\n🔌 Active Notifications:\n" + notif_text
 
     # -----------------------------
     # TOOL EXECUTION

@@ -454,10 +454,6 @@ async def websocket_handler(websocket, path=None):
 
 async def main():
     """Start the WebSocket server"""
-    print("🌐 Perfect Text Browser Server")
-    print("📡 WebSocket server starting at ws://localhost:8765")
-    print("📚 Commands: url:example.com, link:N, search:term, form, back, help")
-    print("🔄 Waiting for connections...")
     
     async with websockets.serve(websocket_handler, "localhost", 8765, ping_interval=20, reuse_address=True, ping_timeout=60):
         await asyncio.Future()  # Run forever

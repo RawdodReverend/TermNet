@@ -1,0 +1,9 @@
+MacBook Air – System Overview
+
+Model: MacBook Air (Model Identifier: Mac14,2)
+Chip: Apple M2 (ARM64)
+CPU Cores: 8 total (4 performance + 4 efficiency)
+Memory: 16 GB RAM
+Operating System: macOS Ventura (Darwin Kernel 23.5.0)
+System Firmware: 10151.121.1
+OS Loader: 10151.121.1

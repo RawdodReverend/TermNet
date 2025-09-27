@@ -26,7 +26,7 @@ class ToolLoader:
                 cls = getattr(module, class_name)
                 instance = cls()
                 self.tools[fn["name"]] = instance
-                print(f"✅ Loaded tool: {fn['name']} ({module_name}.{class_name})")
+                #print(f"✅ Loaded tool: {fn['name']} ({module_name}.{class_name})")
             except Exception as e:
                 print(f"❌ Failed to load tool {fn['name']}: {e}")
 
